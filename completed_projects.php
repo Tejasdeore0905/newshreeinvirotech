@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Completed Projects - Shree Enviro Tech</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e6eef7 100%);
+        }
+
+        .projects-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .projects-container h2 {
+            color: #1a4b8c;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .projects-container p {
+            color: #444;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .project-card {
+            background: #ffffff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0 10px;
+            border: 1px solid #e0e6ed;
+        }
+
+        .project-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(26, 75, 140, 0.2);
+            border-color: rgba(26, 75, 140, 0.3);
+        }
+
+        .project-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .project-card:hover img {
+            transform: scale(1.1);
+        }
+
+        .project-card-content {
+            padding: 25px;
+            background: #ffffff;
+            position: relative;
+            z-index: 1;
+        }
+
+        .project-card-content h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a4b8c;
+            margin-bottom: 15px;
+            position: relative;
+            padding-bottom: 10px;
+            letter-spacing: 0.5px;
+            line-height: 1.3;
+        }
+
+        .project-card-content h3::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #1a4b8c, #6EB76E);
+            transition: width 0.3s ease;
+        }
+
+        .project-card:hover .project-card-content h3::after {
+            width: 100px;
+        }
+
+        .project-card-content p {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 15px;
+            border-left: 3px solid #6EB76E;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover .project-card-content p {
+            color: #333;
+            border-left-color: #1a4b8c;
+            transform: translateX(5px);
+        }
+
+        @media (max-width: 768px) {
+            .projects-container {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+
+            .project-card-content h3 {
+                font-size: 1.3rem;
+            }
+        }
+
+        /* Footer Styles */
+        .footer {
+            background: linear-gradient(135deg, #1a4b8c 0%, #2c3e50 100%);
+            color: #fff;
+            padding: 40px 0 0 0;
+            margin-top: 40px;
+        }
+
+        .footer-bottom {
+            background: linear-gradient(135deg, #162c5c 0%, #1a1a1a 100%);
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes width {
+            from {
+                width: 0;
+            }
+            to {
+                width: 150px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 80px 20px;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .header h2 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+
+    <div class="header">
+        <h1>Completed Projects</h1>
+        <h2>Our Success Stories and Achievements</h2>
+    </div>
+
+    <!-- Completed Projects Section -->
+    <div class="projects-container">
+        <!-- Project 1 -->
+        <div class="project-card">
+            <img src="assets/CPU.jpg" alt="CPU">
+            <div class="project-card-content">
+                <h3>CPU UNITS COMPLETED PROJECTS</h3>
+                <p>1.NSL SUGAR LTD. U-3 Jaimahesh,Pawarwadi,Tal. Majalgaon, Beed.<br>
+                   2.Shrinath Mhaskoba Sakhar Karkhana.Atpost:Patethan, Tal.: Daund, Dist.: Pune<br>
+                   3.Shri Sant Tukaram SSK LTD. Atpost: Kasarsaie, Pune.<br>
+                   4.AJINKYATARA SSK LTD. Distillery CPU,SATARA<br>
+                   5. Khandoba Prassan Distillery,Satara<br>
+                   6. Ashti sugars Ltd. Ashti,Tal.: Mohol,Dist.: Solapur.</p>
+            </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="project-card">
+            <img src="assets/STP.jpg" alt="STP">
+            <div class="project-card-content">
+                <h3>STP COMPLETED PROJECTS</h3>
+                <p>1.Sinhgad Institute of Technology.AtPost: Ambegaon, Tal.: Haveli, Dist.:Pune.<br>
+                   2.D Y PATIL Collage Akurdi,Pune.<br>
+                   3.Hotel Lemon Tree Hinjawadi, Pune<br>
+                   4. Dana India Pvt. Ltd Hinjawadi, Pune<br>
+                   5.Hotel Sagarplaza Pune-1<br>
+                   6.Precision Automation & Robotics India Ltd.Dhangarwadi, Shirwal.</p>
+            </div>
+        </div>
+
+        <!-- Project 3 -->
+        <div class="project-card">
+            <img src="assets/ETP.jpg" alt="ETP">
+            <div class="project-card-content">
+                <h3>ETP COMPLETED PROJECTS</h3>
+                <p>1. SP SUGARS PVT. LTD.Atpost: Tadawala,Dharashiv<br>
+                   2.SMDM Agro Products Pvt. Ltd.Atpost:Moha,Tal.:Kalamb,Dist.:Dharashiv<br>
+                   3.Blue Sappire Food Processing LTD.Tirthpuri,Tal.:Ghansawangi,Dist.:Jalana.<br>
+                   4.Shri Basweshwar Sugar Pvt. Ltd,Athani, Karnataka.<br>
+                   5. Pawar-Lohiya Jaggery Pvt. Ltd.Shirsala,Dist.: Beed.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <?php include 'includes/footer.php'; ?>
+
+    <script>
+        // Header scroll effect
+        window.addEventListener('scroll', function() {
+          const header = document.querySelector('header');
+          if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+          } else {
+            header.classList.remove('scrolled');
+          }
+        });
+
+        // Set active menu item
+        const currentLocation = window.location.pathname;
+        const menuItems = document.querySelectorAll('nav ul li a');
+        menuItems.forEach(item => {
+          if (item.getAttribute('href') === currentLocation.split('/').pop()) {
+            item.parentElement.classList.add('active');
+          }
+        });
+
+        // Mobile menu toggle
+        const hamburger = document.querySelector(".hamburger");
+        const navLinks = document.querySelector(".nav-links");
+
+        hamburger.addEventListener("click", () => {
+          hamburger.classList.toggle("active");
+          navLinks.classList.toggle("active");
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll(".nav-links li a").forEach(link => {
+          link.addEventListener("click", () => {
+            hamburger.classList.remove("active");
+            navLinks.classList.remove("active");
+          });
+        });
+    </script>
+</body>
+</html> 

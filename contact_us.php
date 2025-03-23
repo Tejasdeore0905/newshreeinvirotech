@@ -1,0 +1,735 @@
+<?php
+// This is a simple PHP contact form script
+
+// Process form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = $_POST['name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $message = $_POST['message'] ?? '';
+    
+    // You can add validation and email sending functionality here
+    // For example:
+    // mail("recipient@example.com", "Contact Form Submission", $message, "From: $email");
+    
+    // For demo purposes, we'll just redirect to the same page
+    $success = true;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e6eef7 100%);
+        }
+        
+        /* Added animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes borderPulse {
+            0% { box-shadow: 0 0 0 0 rgba(110, 183, 110, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(110, 183, 110, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(110, 183, 110, 0); }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: #ffffff;
+            color: #333;
+            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        nav {
+            background-color: #ffffff !important;
+        }
+
+        .logo img {
+            width: 120px;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+        }
+
+        nav ul li {
+            margin: 0 15px;
+        }
+
+        nav ul li a {
+            color: #333;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            position: relative;
+            padding-bottom: 5px;
+            transition: color 0.3s ease;
+        }
+        
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #6EB76E;
+            transition: width 0.3s ease;
+        }
+        
+        nav ul li a:hover {
+            color: #6EB76E;
+        }
+        
+        nav ul li a:hover::after {
+            width: 100%;
+        }
+        
+        /* Contact Form Styles */
+        .main-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            padding-top: px; /* Space for the navbar */
+        }
+        
+        .bg-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("assets/tinu.jpg"); /* Replace with your actual image URL */
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.7);
+            z-index: -1;
+            animation: pulse 15s ease-in-out infinite;
+        }
+        
+        .contact-container {
+            display: flex;
+            width: 100%;
+            min-height: 80vh;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .contact-left {
+            flex: 1;
+            color: white;
+            padding: 40px 40px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5)), url('assets/tinu.jpg') no-repeat center center/cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            animation: slideInLeft 0.8s ease-out forwards;
+        }
+        
+        .contact-right {
+            flex: 1;
+            background: #ffffff;
+            padding: 40px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            animation: slideInRight 0.8s ease-out forwards;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        h1::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 60px;
+            height: 3px;
+            background-color: #6EB76E;
+            animation: width 1.5s ease-out;
+        }
+        
+        .contact-info {
+            margin-top: 40px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Stagger the animation for each info item */
+        .info-item:nth-child(1) { animation-delay: 0.3s; }
+        .info-item:nth-child(2) { animation-delay: 0.6s; }
+        .info-item:nth-child(3) { animation-delay: 0.9s; }
+        .info-item:nth-child(4) { animation-delay: 1.2s; }
+        
+        .info-item i {
+            margin-right: 15px;
+            font-size: 1.2rem;
+            min-width: 24px;
+        }
+        
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .contact-form input,
+        .contact-form textarea {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-form input:focus,
+        .contact-form textarea:focus {
+            border-color: #6EB76E;
+            box-shadow: 0 0 0 3px rgba(110, 183, 110, 0.2);
+            outline: none;
+            transform: translateY(-2px);
+        }
+        
+        .contact-form textarea {
+            height: 150px;
+            resize: none;
+        }
+        
+        .contact-form button {
+            background-color: #6EB76E;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: max-content;
+            padding-left: 25px;
+            padding-right: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .contact-form button:hover {
+            background-color: #5ca85c;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .contact-form button:active {
+            transform: translateY(-1px);
+        }
+        
+        /* Button animation */
+        .contact-form button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .contact-form button:hover::after {
+            transform: translateX(100%);
+        }
+        
+        /* Map Section Styles */
+        .map-section {
+            width: 100%;
+            padding: 50px 0;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards;
+            animation-delay: 0.5s;
+        }
+        
+        .map-container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .map-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .map-container h2::after {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 2px;
+            background-color: #6EB76E;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        
+        .map-container h2:hover::after {
+            width: 100%;
+        }
+        
+        .map-responsive {
+            overflow: hidden;
+            padding-bottom: 400px;
+            position: relative;
+            height: 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .map-responsive:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .map-responsive iframe {
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            border: none;
+        }
+        
+        /* Success message animation */
+        @keyframes successPulse {
+            0% { background-color: rgba(110, 183, 110, 0.7); }
+            50% { background-color: rgba(110, 183, 110, 0.9); }
+            100% { background-color: rgba(110, 183, 110, 0.7); }
+        }
+        
+        .success-message {
+            color: white;
+            background-color: rgba(110, 183, 110, 0.7);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            animation: successPulse 2s infinite, fadeIn 0.5s ease-out;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 1024px) {
+            .contact-container {
+                width: 90%;
+                margin: 20px auto;
+            }
+
+            .contact-left, .contact-right {
+                padding: 30px;
+            }
+
+            .info-item p {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .contact-container {
+                flex-direction: column;
+                width: 95%;
+            }
+
+            .contact-left, .contact-right {
+                width: 100%;
+                padding: 25px;
+            }
+
+            .contact-form input,
+            .contact-form textarea {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+
+            .map-responsive {
+                padding-bottom: 300px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .contact-container {
+                width: 100%;
+                margin: 10px auto;
+            }
+
+            .contact-left, .contact-right {
+                padding: 20px;
+            }
+
+            .contact-form input,
+            .contact-form textarea {
+                padding: 8px;
+                font-size: 0.85rem;
+            }
+
+            .contact-form button {
+                width: 100%;
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+
+            .info-item {
+                margin-bottom: 15px;
+            }
+
+            .info-item i {
+                font-size: 1rem;
+            }
+
+            .info-item p {
+                font-size: 0.85rem;
+            }
+
+            .map-responsive {
+                padding-bottom: 250px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 30px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .contact-left, .contact-right {
+                padding: 15px;
+            }
+
+            .contact-form input,
+            .contact-form textarea {
+                margin-bottom: 10px;
+            }
+
+            .map-responsive {
+                padding-bottom: 200px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* New Footer Styles */
+        .footer {
+            background: linear-gradient(135deg, #1a4b8c 0%, #2c3e50 100%);
+            color: #fff;
+            padding: 40px 0 0 0;
+            margin-top: 40px;
+        }
+        
+        .footer-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .footer-column {
+            flex: 1;
+            min-width: 250px;
+            margin-bottom: 30px;
+            padding: 0 15px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Stagger the animation for each footer column */
+        .footer-column:nth-child(1) { animation-delay: 0.1s; }
+        .footer-column:nth-child(2) { animation-delay: 0.3s; }
+        .footer-column:nth-child(3) { animation-delay: 0.5s; }
+        .footer-column:nth-child(4) { animation-delay: 0.7s; }
+        
+        .footer-column h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .footer-column h3:after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 2px;
+            background-color: #6EB76E;
+            transition: width 0.3s ease;
+        }
+        
+        .footer-column:hover h3:after {
+            width: 100%;
+        }
+        
+        .footer-column ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .footer-column ul li {
+            margin-bottom: 10px;
+            transform: translateX(-10px);
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+            animation-delay: calc(0.1s * var(--item-index, 0));
+        }
+        
+        .footer-column ul li:nth-child(1) { --item-index: 1; }
+        .footer-column ul li:nth-child(2) { --item-index: 2; }
+        .footer-column ul li:nth-child(3) { --item-index: 3; }
+        .footer-column ul li:nth-child(4) { --item-index: 4; }
+        .footer-column ul li:nth-child(5) { --item-index: 5; }
+        .footer-column ul li:nth-child(6) { --item-index: 6; }
+        .footer-column ul li:nth-child(7) { --item-index: 7; }
+        
+        .footer-column ul li a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-column ul li a:hover {
+            color: #6EB76E;
+        }
+        
+        .footer-column p {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .social-icons {
+            margin-top: 20px;
+        }
+        
+        .social-icons a {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            background-color: #444;
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 36px;
+            margin-right: 10px;
+            transition: background-color 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .social-icons a:hover {
+            background-color: #ff0000;
+            transform: translateY(-3px);
+        }
+        
+        .footer-form {
+            display: flex;
+            margin-top: 20px;
+        }
+        
+        .footer-form input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .footer-form button {
+            padding: 10px 15px;
+            background-color: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .footer-form button:hover {
+            background-color: #6EB76E;
+        }
+        
+        .footer-bottom {
+            background: linear-gradient(135deg, #162c5c 0%, #1a1a1a 100%);
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        .footer-bottom p {
+            margin: 0;
+            color: #ccc;
+        }
+        
+        .footer-bottom-links {
+            margin-top: 10px;
+        }
+        
+        .footer-bottom-links a {
+            color: #ccc;
+            margin: 0 10px;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-bottom-links a:hover {
+            color: #6EB76E;
+        }
+        
+        @media (max-width: 768px) {
+            .footer-column {
+                flex: 100%;
+            }
+            
+            .footer-form {
+                flex-direction: column;
+            }
+            
+            .footer-form input, .footer-form button {
+                width: 100%;
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    
+    <div class="main-content">
+        <!-- Background image -->
+        <div class="bg-image"></div>
+        
+        <!-- Contact container -->
+        <div class="contact-container">
+            <!-- Left side (Contact info) -->
+            <div class="contact-left">
+                <h1>Shree Enviro Tech</h1>
+                
+                <div class="contact-info">
+                    <div class="info-item">
+                        <i>📍</i>
+                        <p>1 Shreyas apt Dangat, SR. No.79/2, Pandurang Industrial Area, Shivane, Pune, Maharashtra 411023 Shree Enviro Tech, Shop No.01, Shreyas Apartment, Shivane, Dangat Industrial Area, Near Chaudhary Witbhati, Pune, Pune, Maharashtra, 411023</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i>📞</i>
+                        <p>+91 98765 43210</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i>📧</i>
+                        <p>info@shreeenvirotech.com</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i>🌐</i>
+                        <p>aqua.shree@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right side (Form) -->
+            <div class="contact-right">
+                <h1>Contact us</h1>
+                
+                <?php if (isset($success)): ?>
+                    <div class="success-message">Your message has been sent successfully!</div>
+                <?php endif; ?>
+                
+                <form class="contact-form" method="post" action="submit.php">
+                    <input type="text" name="name" placeholder="Name *" required>
+                    <input type="text" name="company" placeholder="Company Name *" required>
+                    <input type="email" name="email" placeholder="Email *" required>
+                    <input type="tel" name="mobile" placeholder="Mobile *" required>
+                    <textarea name="message" placeholder="Message *" required></textarea>
+                    <button type="submit">Send Message</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Map Section -->
+        <section class="map-section">
+            <div class="map-container">
+                <h2>Our Location</h2>
+                <div class="map-responsive">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7568.733324140511!2d73.7818624410502!3d18.467043530464405!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc295edf1b5b709%3A0xf04f37380aa2c504!2sSHREE%20ENVIRO%20TECH%2C%20Pune!5e0!3m2!1sen!2sin!4v1740901436645!5m2!1sen!2sin" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Footer Section -->
+    <?php include 'includes/footer.php'; ?>
+
+</body>
+</html>
