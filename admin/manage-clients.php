@@ -1,0 +1,159 @@
+<?php
+session_start();
+require_once('../includes/db_config.php');
+
+// Check if user is logged in
+if(!isset($_SESSION['admin_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Handle client deletion
+if(isset($_POST['delete_client'])) {
+    $client_id = $_POST['client_id'];
+    
+    // First delete the client's logo if it exists
+    $stmt = $conn->prepare("SELECT logo FROM clients WHERE id = ?");
+    $stmt->bind_param("i", $client_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($logo = $result->fetch_assoc()) {
+        if($logo['logo'] && file_exists("../uploads/clients/" . $logo['logo'])) {
+            unlink("../uploads/clients/" . $logo['logo']);
+        }
+    }
+    
+    // Delete the client
+    $stmt = $conn->prepare("DELETE FROM clients WHERE id = ?");
+    $stmt->bind_param("i", $client_id);
+    if($stmt->execute()) {
+        // Log the activity
+        $admin_id = $_SESSION['admin_id'];
+        $description = "Deleted client ID: " . $client_id;
+        $conn->query("INSERT INTO admin_activity_log (admin_id, action_type, description) 
+                     VALUES ($admin_id, 'delete_client', '$description')");
+        
+        header("Location: manage-clients.php?msg=deleted");
+        exit();
+    }
+}
+
+// Get all clients
+$query = "SELECT * FROM clients ORDER BY name ASC";
+$clients = $conn->query($query);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Clients - Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Include Sidebar -->
+        <?php include 'includes/sidebar.php'; ?>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Manage Clients</h2>
+                <div class="user-info">
+                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_username']); ?></span>
+                    <a href="logout.php" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+
+            <!-- Success/Error Messages -->
+            <?php if(isset($_GET['msg'])): ?>
+            <div class="alert <?php echo $_GET['msg'] === 'deleted' ? 'alert-success' : 'alert-danger'; ?>">
+                <?php 
+                if($_GET['msg'] === 'deleted') echo "Client deleted successfully!";
+                elseif($_GET['msg'] === 'added') echo "New client added successfully!";
+                elseif($_GET['msg'] === 'updated') echo "Client updated successfully!";
+                ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Add Client Button -->
+            <div class="action-bar">
+                <a href="add-client.php" class="add-btn">
+                    <i class="fas fa-plus"></i> Add New Client
+                </a>
+            </div>
+
+            <!-- Clients List -->
+            <div class="data-section">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Logo</th>
+                                <th>Name</th>
+                                <th>Website</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($client = $clients->fetch_assoc()): ?>
+                            <tr>
+                                <td>
+                                    <?php if($client['logo']): ?>
+                                        <img src="../uploads/clients/<?php echo htmlspecialchars($client['logo']); ?>" 
+                                             alt="<?php echo htmlspecialchars($client['name']); ?>" 
+                                             class="client-logo">
+                                    <?php else: ?>
+                                        <i class="fas fa-building"></i>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($client['name']); ?></td>
+                                <td>
+                                    <?php if($client['website']): ?>
+                                        <a href="<?php echo htmlspecialchars($client['website']); ?>" 
+                                           target="_blank" class="website-link">
+                                            <i class="fas fa-external-link-alt"></i> Visit Website
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted">No website</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="status <?php echo $client['status']; ?>">
+                                        <?php echo ucfirst($client['status']); ?>
+                                    </span>
+                                </td>
+                                <td class="actions">
+                                    <a href="edit-client.php?id=<?php echo $client['id']; ?>" 
+                                       class="action-btn edit-btn" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="POST" class="delete-form" 
+                                          onsubmit="return confirm('Are you sure you want to delete this client?');">
+                                        <input type="hidden" name="client_id" value="<?php echo $client['id']; ?>">
+                                        <button type="submit" name="delete_client" class="action-btn delete-btn" title="Delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                            <?php if($clients->num_rows === 0): ?>
+                            <tr>
+                                <td colspan="5" class="text-center">No clients found</td>
+                            </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html> 

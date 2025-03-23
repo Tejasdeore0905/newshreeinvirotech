@@ -1,0 +1,262 @@
+<?php
+session_start();
+require_once('../includes/db_config.php');
+
+// Check if user is logged in
+if(!isset($_SESSION['admin_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Handle event deletion
+if(isset($_POST['delete_event'])) {
+    $event_id = $_POST['event_id'];
+    
+    // First delete the event's images
+    $stmt = $conn->prepare("SELECT featured_image FROM events WHERE id = ?");
+    $stmt->bind_param("i", $event_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($image = $result->fetch_assoc()) {
+        if($image['featured_image'] && file_exists("../uploads/events/" . $image['featured_image'])) {
+            unlink("../uploads/events/" . $image['featured_image']);
+        }
+    }
+    
+    // Delete event images from gallery
+    $stmt = $conn->prepare("SELECT image_path FROM event_images WHERE event_id = ?");
+    $stmt->bind_param("i", $event_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while($img = $result->fetch_assoc()) {
+        if(file_exists("../uploads/events/" . $img['image_path'])) {
+            unlink("../uploads/events/" . $img['image_path']);
+        }
+    }
+    
+    // Delete the event and its images
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("DELETE FROM event_images WHERE event_id = ?");
+        $stmt->bind_param("i", $event_id);
+        $stmt->execute();
+        
+        $stmt = $conn->prepare("DELETE FROM events WHERE id = ?");
+        $stmt->bind_param("i", $event_id);
+        $stmt->execute();
+        
+        $conn->commit();
+        header("Location: manage-events.php?msg=deleted");
+        exit();
+    } catch(Exception $e) {
+        $conn->rollback();
+        header("Location: manage-events.php?msg=error");
+        exit();
+    }
+}
+
+// Get all events
+$query = "SELECT * FROM events ORDER BY event_date DESC";
+$events = $conn->query($query);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Events - Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Add Swiper's CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+    <style>
+        .event-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .event-header {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .event-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        
+        .event-date {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .event-content {
+            padding: 20px;
+        }
+        
+        .event-description {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .event-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .event-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        
+        /* Slideshow Styles */
+        .swiper-container {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .swiper-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .swiper-button-next,
+        .swiper-button-prev {
+            color: var(--primary-color);
+        }
+        
+        .swiper-pagination-bullet-active {
+            background: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Include Sidebar -->
+        <?php include 'includes/sidebar.php'; ?>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Manage Events</h2>
+                <div class="user-info">
+                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_username']); ?></span>
+                    <a href="logout.php" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+
+            <!-- Success/Error Messages -->
+            <?php if(isset($_GET['msg'])): ?>
+            <div class="alert <?php echo $_GET['msg'] === 'deleted' ? 'alert-success' : 'alert-danger'; ?>">
+                <?php 
+                if($_GET['msg'] === 'deleted') echo "Event deleted successfully!";
+                elseif($_GET['msg'] === 'added') echo "New event added successfully!";
+                elseif($_GET['msg'] === 'updated') echo "Event updated successfully!";
+                ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Add Event Button -->
+            <div class="action-bar">
+                <a href="add-event.php" class="add-btn">
+                    <i class="fas fa-plus"></i> Add New Event
+                </a>
+            </div>
+
+            <!-- Events List -->
+            <div class="events-container">
+                <!-- Industrial Expo 2020 -->
+                <div class="event-card">
+                    <div class="event-header">
+                        <h3 class="event-title">Industrial Expo 2020</h3>
+                        <div class="event-date">
+                            <i class="fas fa-calendar-alt"></i> 2020
+                        </div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-description">
+                            <p>Industrial Expo 2020 showcased the latest innovations and technologies in the environmental sector.</p>
+                        </div>
+                        <div class="event-images">
+                            <img src="../assets/event1.jpg" alt="Expo Image 1" class="event-image">
+                            <img src="../assets/event2.jpg" alt="Expo Image 2" class="event-image">
+                            <img src="../assets/event3.jpg" alt="Expo Image 3" class="event-image">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VSI Conference 2024 -->
+                <div class="event-card">
+                    <div class="event-header">
+                        <h3 class="event-title">3rd International Conference - Vasantdada Sugar Institute, Pune</h3>
+                        <div class="event-date">
+                            <i class="fas fa-calendar-alt"></i> 12 JAN 2024 to 14 JAN 2024
+                        </div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-description">
+                            <p>Shree Nitin Gadkari, Hon. Ministor for Road Transport & Highways of India and Shree Sharad Pawar, President Vasantdada Sugar Institute is waving at the inauguration of 3rd International Conference and Exhibition on Sustainability:Challenges & Opportunities in Global Sugar Industry at Vasantdada Sugar Institute (VSI) at Manjari in Pune, Maharashtra on January 12th-14th, 2024.</p>
+                        </div>
+                        <!-- Slideshow Container -->
+                        <div class="swiper-container">
+                            <div class="swiper-wrapper">
+                                <!-- Slideshow images will be added here manually -->
+                                <div class="swiper-slide">
+                                    <img src="../uploads/events/vsi_placeholder.jpg" alt="Conference Image">
+                                </div>
+                                <!-- More slides can be added here -->
+                            </div>
+                            <!-- Add Navigation -->
+                            <div class="swiper-button-next"></div>
+                            <div class="swiper-button-prev"></div>
+                            <!-- Add Pagination -->
+                            <div class="swiper-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+    <!-- Add Swiper JS -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script>
+        // Initialize Swiper
+        var swiper = new Swiper('.swiper-container', {
+            // Optional parameters
+            loop: true,
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+            
+            // Navigation arrows
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+            
+            // Pagination
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,78 @@
+<?php
+session_start();
+require_once('../includes/db_config.php');
+
+// Check if already logged in
+if(isset($_SESSION['admin_id'])) {
+    header("Location: dashboard.php");
+    exit();
+}
+
+$error = '';
+
+if($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+
+    if(!empty($username) && !empty($password)) {
+        $query = "SELECT id, username, password FROM admin_users WHERE username = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            if(password_verify($password, $user['password'])) {
+                $_SESSION['admin_id'] = $user['id'];
+                $_SESSION['admin_username'] = $user['username'];
+                header("Location: dashboard.php");
+                exit();
+            } else {
+                $error = 'Invalid username or password';
+            }
+        } else {
+            $error = 'Invalid username or password';
+        }
+    } else {
+        $error = 'Please enter both username and password';
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Shree Enviro Tech</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="admin-login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <img src="../assets/logo.png" alt="Shree Enviro Tech Logo" class="admin-logo">
+                <h2>Admin Login</h2>
+            </div>
+            <?php if($error): ?>
+            <div class="alert alert-danger">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+            <?php endif; ?>
+            <form class="login-form" method="POST" action="">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html> 

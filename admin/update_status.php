@@ -1,0 +1,34 @@
+<?php
+session_start();
+require_once('../includes/db_config.php');
+
+// Check if admin is logged in
+if(!isset($_SESSION['admin_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit();
+}
+
+if(isset($_POST['id']) && isset($_POST['status'])) {
+    $id = (int)$_POST['id'];
+    $status = $_POST['status'];
+    
+    // Validate status
+    if(!in_array($status, ['new', 'read', 'replied'])) {
+        echo json_encode(['success' => false, 'message' => 'Invalid status']);
+        exit();
+    }
+    
+    // Update status
+    $query = "UPDATE contact_submissions SET status = ? WHERE id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("si", $status, $id);
+    
+    if($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Missing parameters']);
+}
+?> 

@@ -1,0 +1,192 @@
+<?php
+require_once '../config.php';
+session_start();
+
+// Basic authentication check
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+// Handle status updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
+    $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING);
+    
+    try {
+        $stmt = $conn->prepare("UPDATE contact_submissions SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $id]);
+    } catch (PDOException $e) {
+        error_log("Error updating status: " . $e->getMessage());
+    }
+}
+
+// Get submissions with pagination
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$per_page = 10;
+$offset = ($page - 1) * $per_page;
+
+try {
+    // Get total count
+    $count_stmt = $conn->query("SELECT COUNT(*) FROM contact_submissions");
+    $total_records = $count_stmt->fetchColumn();
+    $total_pages = ceil($total_records / $per_page);
+
+    // Get submissions for current page
+    $stmt = $conn->prepare("SELECT * FROM contact_submissions ORDER BY submission_date DESC LIMIT ? OFFSET ?");
+    $stmt->execute([$per_page, $offset]);
+    $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Error fetching submissions: " . $e->getMessage());
+    $submissions = [];
+    $total_pages = 0;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Contact Submissions - Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-new { color: #ff0000; }
+        .status-read { color: #ffa500; }
+        .status-replied { color: #008000; }
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .pagination a {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-decoration: none;
+            color: #333;
+            border-radius: 4px;
+        }
+        .pagination a:hover {
+            background-color: #f5f5f5;
+        }
+        .pagination .active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .action-form {
+            display: inline;
+        }
+        .action-form select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .action-form button {
+            padding: 4px 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .action-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Contact Form Submissions</h1>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Company</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Message</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($submissions as $submission): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($submission['id']); ?></td>
+                    <td><?php echo htmlspecialchars($submission['name']); ?></td>
+                    <td><?php echo htmlspecialchars($submission['company']); ?></td>
+                    <td><?php echo htmlspecialchars($submission['email']); ?></td>
+                    <td><?php echo htmlspecialchars($submission['mobile']); ?></td>
+                    <td><?php echo htmlspecialchars($submission['message']); ?></td>
+                    <td><?php echo date('Y-m-d H:i', strtotime($submission['submission_date'])); ?></td>
+                    <td class="status-<?php echo $submission['status']; ?>">
+                        <?php echo ucfirst($submission['status']); ?>
+                    </td>
+                    <td>
+                        <form class="action-form" method="post">
+                            <input type="hidden" name="id" value="<?php echo $submission['id']; ?>">
+                            <select name="status">
+                                <option value="new" <?php echo $submission['status'] === 'new' ? 'selected' : ''; ?>>New</option>
+                                <option value="read" <?php echo $submission['status'] === 'read' ? 'selected' : ''; ?>>Read</option>
+                                <option value="replied" <?php echo $submission['status'] === 'replied' ? 'selected' : ''; ?>>Replied</option>
+                            </select>
+                            <button type="submit" name="update_status">Update</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <?php if ($total_pages > 1): ?>
+        <div class="pagination">
+            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                <a href="?page=<?php echo $i; ?>" <?php echo $page === $i ? 'class="active"' : ''; ?>>
+                    <?php echo $i; ?>
+                </a>
+            <?php endfor; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</body>
+</html> 

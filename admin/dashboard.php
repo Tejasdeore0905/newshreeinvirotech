@@ -1,0 +1,617 @@
+<?php
+session_start();
+require_once('../includes/db_config.php');
+
+// Check if user is logged in
+if(!isset($_SESSION['admin_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Get admin info
+$admin_id = $_SESSION['admin_id'];
+$admin_username = $_SESSION['admin_username'];
+
+// Get quick stats
+$stmt = $conn->prepare("SELECT 
+    (SELECT COUNT(*) FROM clients) as total_clients,
+    (SELECT COUNT(*) FROM projects) as total_projects,
+    (SELECT COUNT(*) FROM events WHERE status != 'cancelled') as upcoming_events,
+    (SELECT COUNT(*) FROM contact_submissions WHERE status = 'new') as new_submissions");
+$stmt->execute();
+$stats = $stmt->get_result()->fetch_assoc();
+
+// Get recent projects
+$recent_projects = $conn->query("SELECT * FROM projects ORDER BY completion_date DESC LIMIT 5");
+
+// Get upcoming events
+$upcoming_events = $conn->query("SELECT * FROM events WHERE status = 'upcoming' ORDER BY date ASC LIMIT 5");
+
+// Get recent clients
+$recent_clients = $conn->query("SELECT name as company, created_at FROM clients ORDER BY created_at DESC LIMIT 5");
+
+// Handle bulk delete for submissions
+if(isset($_POST['bulk_delete']) && isset($_POST['selected_ids'])) {
+    $ids = implode(',', array_map('intval', $_POST['selected_ids']));
+    $delete_query = "DELETE FROM contact_submissions WHERE id IN ($ids)";
+    $conn->query($delete_query);
+}
+
+// Handle single delete for submissions
+if(isset($_GET['delete_id'])) {
+    $delete_id = intval($_GET['delete_id']);
+    $delete_query = "DELETE FROM contact_submissions WHERE id = ?";
+    $delete_stmt = $conn->prepare($delete_query);
+    $delete_stmt->bind_param("i", $delete_id);
+    $delete_stmt->execute();
+}
+
+// Get filter and search parameters for submissions
+$status_filter = $_GET['status'] ?? 'all';
+$search_date = $_GET['search_date'] ?? '';
+$sort_by = $_GET['sort_by'] ?? 'submission_date';
+$sort_order = $_GET['sort_order'] ?? 'DESC';
+
+// Build the submissions query
+$query = "SELECT * FROM contact_submissions WHERE 1=1";
+
+if($status_filter !== 'all') {
+    $query .= " AND status = '$status_filter'";
+}
+
+if($search_date) {
+    $query .= " AND DATE(submission_date) = '$search_date'";
+}
+
+$query .= " ORDER BY $sort_by $sort_order";
+
+$contact_result = $conn->query($query);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Shree Enviro Tech</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* Admin Header */
+        .admin-header {
+            background: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .top-bar-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-logo {
+            height: 40px;
+            width: auto;
+        }
+
+        .top-bar-title h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-card i {
+            font-size: 2rem;
+            color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .stat-info h3 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stat-info p {
+            margin: 5px 0 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h3 i {
+            color: #4a90e2;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        /* List Items */
+        .list-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+
+        .list-item:hover {
+            background: #f0f0f0;
+        }
+
+        .item-info h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .item-info p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .item-info small {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        /* Submissions Section */
+        .submissions-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .filter-controls {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #f8f9fa;
+        }
+
+        .filter-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .filter-form select,
+        .filter-form input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .filter-form button {
+            height: 38px;
+            padding: 0 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .filter-form button:hover {
+            background: #357abd;
+        }
+
+        /* Table Styles */
+        .submissions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .submissions-table th,
+        .submissions-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .submissions-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .submissions-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-badge.new {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-badge.read {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.replied {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-view {
+            background: #2196f3;
+        }
+
+        .btn-reply {
+            background: #4caf50;
+        }
+
+        .btn-delete {
+            background: #f44336;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid,
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-form {
+                flex-direction: column;
+            }
+
+            .form-group {
+                max-width: none;
+            }
+
+            .submissions-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <?php include('includes/sidebar.php'); ?>
+        
+        <div class="main-content">
+            <div class="admin-header">
+                <div class="top-bar-title">
+                    <img src="../assets/logo.png" alt="Shree Enviro Tech Logo" class="admin-logo">
+                    <h2>Admin Panel</h2>
+                </div>
+                <div class="user-info">
+                    <span>Welcome, <?php echo htmlspecialchars($admin_username); ?></span>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-info">
+                        <h3>Total Clients</h3>
+                        <p><?php echo $stats['total_clients']; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-project-diagram"></i>
+                    <div class="stat-info">
+                        <h3>Total Projects</h3>
+                        <p><?php echo $stats['total_projects']; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div class="stat-info">
+                        <h3>Upcoming Events</h3>
+                        <p><?php echo $stats['upcoming_events']; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-envelope"></i>
+                    <div class="stat-info">
+                        <h3>New Submissions</h3>
+                        <p><?php echo $stats['new_submissions']; ?></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Recent Projects -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-project-diagram"></i> Recent Projects</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="list-group">
+                            <?php if($recent_projects->num_rows > 0): ?>
+                                <?php while($project = $recent_projects->fetch_assoc()): ?>
+                                    <div class="list-item">
+                                        <div class="item-info">
+                                            <h4><?php echo htmlspecialchars($project['title']); ?></h4>
+                                            <p><?php echo htmlspecialchars($project['description']); ?></p>
+                                            <small>Completed: <?php echo date('d M Y', strtotime($project['completion_date'])); ?></small>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <p class="no-data">No recent projects</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="list-group">
+                            <?php if($upcoming_events->num_rows > 0): ?>
+                                <?php while($event = $upcoming_events->fetch_assoc()): ?>
+                                    <div class="list-item">
+                                        <div class="item-info">
+                                            <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                                            <p><?php echo htmlspecialchars($event['description']); ?></p>
+                                            <small>Date: <?php echo date('d M Y', strtotime($event['date'])); ?></small>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <p class="no-data">No upcoming events</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Clients -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Recent Clients</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="list-group">
+                            <?php if($recent_clients->num_rows > 0): ?>
+                                <?php while($client = $recent_clients->fetch_assoc()): ?>
+                                    <div class="list-item">
+                                        <div class="item-info">
+                                            <h4><?php echo htmlspecialchars($client['company']); ?></h4>
+                                            <small>Added: <?php echo date('d M Y', strtotime($client['created_at'])); ?></small>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <p class="no-data">No recent clients</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submissions Section -->
+            <div class="submissions-section">
+                <div class="card-header">
+                    <h3><i class="fas fa-envelope"></i> Contact Submissions</h3>
+                    <span class="badge"><?php echo $stats['new_submissions']; ?> new</span>
+                </div>
+
+                <div class="filter-controls">
+                    <form class="filter-form" method="GET">
+                        <div class="form-group">
+                            <label for="status">Status</label>
+                            <select name="status" id="status">
+                                <option value="all" <?php echo $status_filter === 'all' ? 'selected' : ''; ?>>All</option>
+                                <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
+                                <option value="read" <?php echo $status_filter === 'read' ? 'selected' : ''; ?>>Read</option>
+                                <option value="replied" <?php echo $status_filter === 'replied' ? 'selected' : ''; ?>>Replied</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="search_date">Date</label>
+                            <input type="text" id="search_date" name="search_date" value="<?php echo htmlspecialchars($search_date); ?>" placeholder="Select date">
+                        </div>
+                        <button type="submit"><i class="fas fa-filter"></i> Filter</button>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <form id="bulk-form" method="POST">
+                        <table class="submissions-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all"></th>
+                                    <th>Date</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Message</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if($contact_result->num_rows > 0): ?>
+                                    <?php while($submission = $contact_result->fetch_assoc()): ?>
+                                        <tr>
+                                            <td><input type="checkbox" name="selected_ids[]" value="<?php echo $submission['id']; ?>"></td>
+                                            <td><?php echo date('d M Y', strtotime($submission['submission_date'])); ?></td>
+                                            <td><?php echo htmlspecialchars($submission['name']); ?></td>
+                                            <td><?php echo htmlspecialchars($submission['email']); ?></td>
+                                            <td><?php echo htmlspecialchars($submission['mobile']); ?></td>
+                                            <td><?php echo substr(htmlspecialchars($submission['message']), 0, 50) . '...'; ?></td>
+                                            <td><span class="status-badge <?php echo $submission['status']; ?>"><?php echo ucfirst($submission['status']); ?></span></td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <a href="view_submission.php?id=<?php echo $submission['id']; ?>" class="btn btn-view"><i class="fas fa-eye"></i></a>
+                                                    <a href="mailto:<?php echo htmlspecialchars($submission['email']); ?>" class="btn btn-reply"><i class="fas fa-reply"></i></a>
+                                                    <button type="button" class="btn btn-delete" onclick="deleteSubmission(<?php echo $submission['id']; ?>)"><i class="fas fa-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="9" class="no-data">No submissions found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize date picker
+        flatpickr("#search_date", {
+            dateFormat: "Y-m-d",
+            allowInput: true
+        });
+
+        // Select all functionality
+        document.getElementById('select-all').addEventListener('change', function() {
+            document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        function deleteSubmission(id) {
+            if(confirm('Are you sure you want to delete this submission?')) {
+                window.location.href = 'dashboard.php?delete_id=' + id;
+            }
+        }
+    </script>
+</body>
+</html>

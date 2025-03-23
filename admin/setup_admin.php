@@ -1,0 +1,99 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+require_once('../includes/db_config.php');
+
+// Default admin credentials
+$admin_username = 'admin';
+$admin_password = 'Admin@123';
+
+echo "Checking database connection... <br>";
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+} else {
+    echo "Database connection successful! <br>";
+}
+
+// First, check if the table exists
+$table_check = $conn->query("SHOW TABLES LIKE 'admin_users'");
+if ($table_check->num_rows == 0) {
+    echo "Creating admin_users table... <br>";
+    $create_table = "CREATE TABLE IF NOT EXISTS admin_users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )";
+    
+    if ($conn->query($create_table)) {
+        echo "Table created successfully! <br>";
+    } else {
+        die("Error creating table: " . $conn->error);
+    }
+}
+
+// Check if admin user already exists
+echo "Checking for existing admin user... <br>";
+$check_query = "SELECT id, username, password FROM admin_users WHERE username = ?";
+$check_stmt = $conn->prepare($check_query);
+$check_stmt->bind_param("s", $admin_username);
+$check_stmt->execute();
+$result = $check_stmt->get_result();
+
+if($result->num_rows === 0) {
+    echo "No admin user found. Creating new admin user... <br>";
+    // Hash the password
+    $hashed_password = password_hash($admin_password, PASSWORD_DEFAULT);
+    
+    // Insert admin user
+    $insert_query = "INSERT INTO admin_users (username, password) VALUES (?, ?)";
+    $insert_stmt = $conn->prepare($insert_query);
+    $insert_stmt->bind_param("ss", $admin_username, $hashed_password);
+    
+    if($insert_stmt->execute()) {
+        echo "<div style='color: green; font-weight: bold;'>";
+        echo "Admin user created successfully!<br>";
+        echo "Username: " . htmlspecialchars($admin_username) . "<br>";
+        echo "Password: " . htmlspecialchars($admin_password) . "<br>";
+        echo "</div>";
+        
+        // Verify the password hash
+        echo "<br>Verifying password hash... <br>";
+        $verify = password_verify($admin_password, $hashed_password);
+        echo "Password verification test: " . ($verify ? "PASSED" : "FAILED") . "<br>";
+        
+        echo "<br><strong style='color: red;'>IMPORTANT: Please delete this file (setup_admin.php) after use for security reasons.</strong>";
+    } else {
+        echo "Error creating admin user: " . $conn->error . "<br>";
+        echo "SQL Error: " . $insert_stmt->error . "<br>";
+    }
+} else {
+    $user = $result->fetch_assoc();
+    echo "<div style='color: blue;'>";
+    echo "Admin user already exists!<br>";
+    echo "Username: " . htmlspecialchars($admin_username) . "<br>";
+    echo "Would you like to reset the password? Add '?reset=true' to the URL.<br>";
+    echo "</div>";
+    
+    // Option to reset password
+    if(isset($_GET['reset']) && $_GET['reset'] === 'true') {
+        $hashed_password = password_hash($admin_password, PASSWORD_DEFAULT);
+        $update_query = "UPDATE admin_users SET password = ? WHERE username = ?";
+        $update_stmt = $conn->prepare($update_query);
+        $update_stmt->bind_param("ss", $hashed_password, $admin_username);
+        
+        if($update_stmt->execute()) {
+            echo "<div style='color: green;'>";
+            echo "Password reset successfully!<br>";
+            echo "New password: " . htmlspecialchars($admin_password) . "<br>";
+            echo "</div>";
+        } else {
+            echo "Error resetting password: " . $conn->error;
+        }
+    }
+}
+
+// Close the connection
+$conn->close();
+?> 
